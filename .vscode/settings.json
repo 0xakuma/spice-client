@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "spice-session.h": "c",
+        "spice-client.h": "c",
+        "glib-object.h": "c",
+        "glib.h": "c",
+        "spice-types.h": "c",
+        "glib-enumtypes.h": "c",
+        "gboxed.h": "c",
+        "gbindinggroup.h": "c",
+        "gbinding.h": "c",
+        "gobject.h": "c",
+        "gfileutils.h": "c",
+        "gerror.h": "c",
+        "galloca.h": "c",
+        "gtypes.h": "c",
+        "glib-visibility.h": "c",
+        "gmacros.h": "c"
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/src/include",
+                "${workspaceFolder}/src/include/spice-1",
+                "${workspaceFolder}/src/include/spice-1/spice",
+                "${workspaceFolder}/src/include/spice-client-glib-2.0",
+                "${workspaceFolder}/src/include/glib-2.0/gobject",
+                "${workspaceFolder}/src/include/glib-2.0",
+                "${workspaceFolder}/src/include/glib-2.0/glib",
+                "${workspaceFolder}/src/include/glib-2.0/gmodule",
+                "${workspaceFolder}/src/include/glib-2.0/gio",
+                "/opt/local/include"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk/System/Library/Frameworks"
+            ],
+            "compilerPath": "/opt/homebrew/opt/llvm/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64"
+        }
+    ],
+    "version": 4
+}
