@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.28)
+project(untitled1 C)
+
+set(CMAKE_C_STANDARD 11)
+
+include_directories("/opt/homebrew/include/spice-client-glib-2.0")
+include_directories("/opt/homebrew/include/glib-2.0")
+include_directories("/opt/homebrew/include/glib-2.0/glib")
+include_directories("/opt/homebrew/include/glib-2.0/gmodule")
+include_directories("/opt/homebrew/include/spice-1")
+include_directories("/opt/homebrew/include/spice-1/spice")
+include_directories("/opt/homebrew/include/glib-2.0/gio")
+include_directories(".")
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+include_directories(${GLIB_INCLUDE_DIRS})
+add_definitions(${GLIB_CFLAGS_OTHER})
+
+link_directories("/opt/homebrew/lib")
+add_executable(spice main.c session.c channel.c connection.c)
+target_link_libraries(spice "/opt/homebrew/lib/libspice-client-glib-2.0.8.dylib" ${GLIB_LIBRARIES} "/opt/homebrew/lib/libgobject-2.0.0.dylib")
