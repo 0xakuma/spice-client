@@ -15,6 +15,10 @@
         "galloca.h": "c",
         "gtypes.h": "c",
         "glib-visibility.h": "c",
-        "gmacros.h": "c"
+        "gmacros.h": "c",
+        "channel.h": "c",
+        "session.h": "c",
+        "string.h": "c",
+        "spice-channel.h": "c"
     }
 }
