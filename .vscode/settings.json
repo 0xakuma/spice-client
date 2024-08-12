@@ -19,6 +19,11 @@
         "channel.h": "c",
         "session.h": "c",
         "string.h": "c",
-        "spice-channel.h": "c"
+        "spice-channel.h": "c",
+        "gslist.h": "c",
+        "gpoll.h": "c",
+        "gthread.h": "c",
+        "dispatch.h": "c",
+        "queue.h": "c"
     }
 }

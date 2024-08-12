@@ -14,7 +14,7 @@ struct _DisplayChannel
     SpiceDisplayChannel *display_channel;
 } typedef DisplayChannel;
 
-MainChannel new_main_channel(MainChannel *main_channel);
-DisplayChannel new_display_channel(Session *session);
+MainChannel *new_main_channel(Session *session);
+DisplayChannel *new_display_channel(Session *session);
 
 #endif
