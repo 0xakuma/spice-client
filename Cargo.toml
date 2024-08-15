@@ -11,9 +11,10 @@ cocoa = "0.25.0"
 winit = "0.29"
 objc = "0.2.7"
 core-graphics-types = { version = "0.1.3", default-features = false }
+prost = "0.13.1"
 
 [build-dependencies]
-cc = "1.0"
+prost-build = { version = "0.13.1" }
 
 [[example]]
 name = "test"
