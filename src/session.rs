@@ -1,14 +1,16 @@
 extern crate glib;
 
-use std::ffi::{c_int, c_void};
+use std::{
+    ffi::{c_int, c_void},
+    sync::{Arc, Mutex},
+};
 
-use ffi::{gboolean, gpointer};
-use gio::Socket;
+use ffi::gboolean;
 use glib::*;
 use object::{ObjectExt, ObjectType};
 use translate::FromGlibPtrNone;
 
-use crate::channel::Channel;
+use crate::{channel::Channel, display_channel::DisplayChannel};
 
 extern "C" {
     fn spice_session_new() -> *mut c_void;
@@ -28,14 +30,22 @@ extern "C" {
 
 pub struct Session {
     inner: *mut c_void,
+    channels: Vec<Box<dyn Channel>>,
 }
 
+unsafe impl Send for Session {}
+unsafe impl Sync for Session {}
+
 impl Session {
-    pub fn new() -> Self {
+    pub fn new() -> Arc<Mutex<Self>> {
         let session = unsafe { spice_session_new() };
-        let _self = Session { inner: session };
-        _self.on_chanel_create();
-        _self
+        let session = Arc::new(Mutex::new(Session {
+            inner: session,
+            channels: Vec::new(),
+        }));
+        let session_clone = Arc::clone(&session);
+        session.lock().unwrap().on_chanel_create(session_clone);
+        session
     }
 
     pub fn set_host(&self, host: &str) {
@@ -46,10 +56,6 @@ impl Session {
     pub fn set_port(&self, port: &str) {
         let obj = self.obj();
         obj.set_property("port", port);
-    }
-
-    pub fn create_channel(&self, _type: i32, id: i32) -> Channel {
-        Channel::new(self.inner, _type, id)
     }
 
     pub fn obj(&self) -> Object {
@@ -66,9 +72,10 @@ impl Session {
         }
     }
 
-    pub fn on_chanel_create(&self) {
+    pub fn on_chanel_create(&self, session_ref: Arc<Mutex<Self>>) {
         let obj = self.obj();
-        obj.connect("channel-new", false, |values| {
+        let weak_session = Arc::downgrade(&session_ref);
+        obj.connect("channel-new", false, move |values| {
             let _session = values.get(0);
             let _channel = values.get(1);
             let _user_data = values.get(2);
@@ -104,11 +111,15 @@ impl Session {
                         }
 
                         if channel_type == 2 {
-                            let callback = |values: &[Value]| {
-                                dbg!("Primary display");
-                                None
-                            };
-                            obj.connect("display-primary-create", false, callback);
+                            if let Some(session) = weak_session.upgrade() {
+                                let display_channel = DisplayChannel::from(obj.as_ptr() as *mut _);
+                                display_channel.connect();
+                                session
+                                    .lock()
+                                    .unwrap()
+                                    .channels
+                                    .push(Box::new(display_channel));
+                            }
                         }
                     }
                 }
@@ -119,7 +130,6 @@ impl Session {
     }
 
     pub fn connect(&self) -> bool {
-        self.on_chanel_create();
         let res = unsafe { spice_session_connect(self.inner) };
         res.is_positive()
     }
@@ -136,8 +146,10 @@ mod test {
     #[test]
     fn session_init() {
         let session = Session::new();
-        session.set_host("localhost");
-        session.set_port("5930");
-        assert_eq!("spice://localhost:5930", session.uri().unwrap());
+        session.lock().unwrap().set_host("localhost");
+        session.lock().unwrap().set_port("5930");
+        let uri = session.lock().unwrap().uri().unwrap();
+        dbg!(uri.clone());
+        assert_eq!("spice://localhost:5930", uri);
     }
 }
