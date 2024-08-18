@@ -20,6 +20,7 @@ fn compile_shaders() {
         .arg("-sdk")
         .arg("macosx")
         .arg("metal")
+        .args(&["-I", "src/shader_types"])
         .args(&["-c", "src/shaders.metal"])
         .args(&["-o", "shaders.air"])
         .spawn()
@@ -54,7 +55,7 @@ fn generate_rust_types_from_shader_types() {
     println!("cargo:warning={}", env::var("OUT_DIR").unwrap());
 
     let bindings = bindgen::Builder::default()
-        .header("shader_types/wrapper.h")
+        .header("src/shader_types/wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .generate()
         .expect("Unable to generate bindings");

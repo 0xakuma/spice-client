@@ -24,6 +24,8 @@
         "gpoll.h": "c",
         "gthread.h": "c",
         "dispatch.h": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "gio-coroutine.h": "c",
+        "gio.h": "c"
     }
 }

@@ -1,79 +1,92 @@
-use std::ffi::c_void;
+use std::{
+    ffi::{c_int, c_void},
+    sync::{Arc, Mutex},
+};
 
 use glib::{object::ObjectExt, translate::FromGlibPtrNone, Object, Value};
 
-use crate::channel::{spice_channel_connect, Channel};
+use crate::channel::spice_channel_connect;
+
+#[derive(Default)]
+pub struct Display {
+    pub canvas_img: Option<*mut c_void>,
+    pub width: c_int,
+    pub height: c_int,
+    pub stride: c_int,
+    pub format: c_int,
+}
 
 pub struct DisplayChannel {
     inner: *mut c_void,
-}
-
-impl From<*mut c_void> for DisplayChannel {
-    fn from(value: *mut c_void) -> Self {
-        let display_channel = Self { inner: value };
-        display_channel.handle_glib_events();
-        display_channel
-    }
-}
-
-impl Channel for DisplayChannel {
-    fn obj(&self) -> glib::Object {
-        unsafe { Object::from_glib_none(self.inner as *const _) }
-    }
-    fn connect(&self) -> bool {
-        let rt = unsafe { spice_channel_connect(self.inner) };
-        rt.is_positive()
-    }
+    pub display: Option<Display>,
 }
 
 impl DisplayChannel {
-    fn handle_glib_events(&self) {
+    pub fn from(value: *mut c_void) -> Arc<Mutex<Self>> {
+        let display_channel = Arc::new(Mutex::new(Self {
+            inner: value,
+            display: None,
+        }));
+        let _display_channel = display_channel.clone();
+        display_channel
+            .lock()
+            .unwrap()
+            .handle_glib_events(_display_channel);
+        display_channel
+    }
+
+    fn obj(&self) -> glib::Object {
+        unsafe { Object::from_glib_none(self.inner as *const _) }
+    }
+    pub fn connect(&self) -> bool {
+        let rt = unsafe { spice_channel_connect(self.inner) };
+        rt.is_positive()
+    }
+    fn handle_glib_events(&self, _ref: Arc<Mutex<Self>>) {
         let obj = self.obj();
 
-        obj.connect("display-primary-create", false, |values: &[Value]| {
-            let display_channel = values.get(0);
-            let format = values.get(1);
-            let width = values.get(2);
-            let shmid = values.get(5);
+        obj.connect(
+            "display-primary-create",
+            false,
+            move |values: &[Value]| {
+                // let shmid = values.get(5);
 
-            let stride: i32 = {
-                let val = if let Some(_stride) = values.get(4) {
-                    let _val = if let Some(_stride) = _stride.get::<i32>().ok() {
-                        _stride
-                    } else {
-                        0
-                    };
-                    _val
-                } else {
-                    0
-                };
-                val
-            };
+                let mut display = Display::default();
 
-            let height: i32 = {
-                let val = if let Some(_height) = values.get(3) {
-                    let _val = if let Some(_height) = _height.get::<i32>().ok() {
-                        _height
-                    } else {
-                        0
-                    };
-                    _val
-                } else {
-                    0
-                };
-                val
-            };
-
-            if let Some(imgdata) = values.get(6) {
-                if let Some(imgdata) = imgdata.get::<*mut c_void>().ok() {
-                    let img_slice = unsafe {
-                        std::slice::from_raw_parts(imgdata as *const _, (stride * height) as usize)
-                    };
+                if let Some(_format) = values.get(1) {
+                    if let Some(_format) = _format.get::<c_int>().ok() {
+                        display.format = _format;
+                    }
                 }
-            }
-            dbg!("Primary display created");
-            None
-        });
+
+                if let Some(_stride) = values.get(4) {
+                    if let Some(_stride) = _stride.get::<c_int>().ok() {
+                        display.stride = _stride;
+                    }
+                }
+
+                if let Some(_width) = values.get(2) {
+                    if let Some(_width) = _width.get::<c_int>().ok() {
+                        display.width = _width;
+                    }
+                }
+
+                if let Some(_height) = values.get(3) {
+                    if let Some(_height) = _height.get::<i32>().ok() {
+                        display.height = _height;
+                    }
+                }
+
+                if let Some(imgdata) = values.get(6) {
+                    if let Some(imgdata) = imgdata.get::<*mut c_void>().ok() {
+                        display.canvas_img = Some(imgdata);
+                    }
+                }
+                _ref.lock().unwrap().display = Some(display);
+                dbg!("Primary display created");
+                None
+            },
+        );
 
         obj.connect("display-primary-destroy", false, |values: &[Value]| {
             if let Some(_display_channel) = values.get(0) {
