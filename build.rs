@@ -1,11 +1,14 @@
 use std::{env, path::PathBuf, process::Command};
 
 fn main() -> std::io::Result<()> {
-    println!("cargo:rustc-link-lib=spice-client-glib-2.0.8");
-    println!("cargo:rustc-link-lib=gio-2.0");
+    println!(
+        "cargo:rustc-link-search=native=/Users/anmoldhiman/dev/spice-client/spice-gtk/build/src",
+        // env!("CARGO_MANIFEST_DIR")
+    );
+    println!("cargo:rustc-link-lib=dylib=spice-client-glib-2.0");
+    // println!("cargo:rustc-link-lib=gio-2.0");
     // println!("cargo:rustc-link-lib=static=spice-common");
-    println!("cargo:rustc-link-lib=gstreamer-1.0");
-    println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+    // println!("cargo:rustc-link-lib=gstreamer-1.0");
     generate_rust_types_from_shader_types();
     compile_shaders();
 

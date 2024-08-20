@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+libc = "*"
 glib = "0.20.0"
 gio = "0.20.0"
 metal = "0.29.0"

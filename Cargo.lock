@@ -1225,6 +1225,7 @@ dependencies = [
  "core-graphics-types",
  "gio",
  "glib",
+ "libc",
  "metal",
  "objc",
  "winit",

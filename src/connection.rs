@@ -1,16 +1,20 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
 use glib::{
     clone::Downgrade,
-    ffi::gboolean,
+    ffi::{g_main_context_push_thread_default, g_main_context_ref, g_main_loop_run, gboolean},
     object::{ObjectExt, ObjectType},
-    Object, Value,
+    MainContext, Object, Value,
 };
 
 use crate::{channel::Channel, display_channel::DisplayChannel, session::Session};
 
 extern "C" {
     pub fn spice_util_set_debug(enabled: gboolean);
+    pub fn spice_util_set_main_context(ctx: *const c_void);
 }
 
 pub struct SpiceConnection<'a> {
@@ -60,6 +64,7 @@ impl<'a> SpiceConnection<'a> {
                         }
 
                         if _channel_type == 2 {
+                            dbg!("Display channel");
                             let display_channel = DisplayChannel::from(obj.as_ptr() as *mut _);
                             if let Some(_channels) = _channels.upgrade() {
                                 _channels
@@ -98,37 +103,39 @@ impl<'a> SpiceConnection<'a> {
         true
     }
 
-    pub fn spawn(&self) {
-        let _session = Arc::downgrade(&self.session);
+    pub fn spawn(&mut self) {
+        unsafe {
+            spice_util_set_debug(1);
+        }
+        let ctx = MainContext::new();
+        let _loop = glib::MainLoop::new(Some(&ctx), false);
+        unsafe {
+            spice_util_set_main_context(ctx.as_ptr() as *const _);
+        };
+        let _session = self.session.clone();
         std::thread::spawn(move || {
             unsafe {
                 spice_util_set_debug(1);
-            }
-            if let Some(_session) = _session.upgrade() {
+                g_main_context_ref(ctx.as_ptr());
+                g_main_context_push_thread_default(ctx.as_ptr());
                 _session.lock().unwrap().connect();
-                let _loop = glib::MainLoop::new(None, false);
-                _loop.run();
-            }
+                g_main_loop_run(_loop.as_ptr());
+            };
         });
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{spice_util_set_debug, SpiceConnection};
+    use super::SpiceConnection;
 
     #[test]
     fn connection_init() {
-        // unsafe {
-        // spice_util_set_debug(1);
-        // }
-        // let ctx = glib::MainContext::new();
-
         let mut connection = SpiceConnection::new();
         connection.host("localhost").port(5930).spawn();
-
-        // let _loop = glib::MainLoop::new(None, false);
-        // _loop.run();
         loop {}
     }
+
+    #[test]
+    fn connection_spawn() {}
 }
