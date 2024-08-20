@@ -25,28 +25,26 @@ impl<'a> CocoaWindow<'a> {
     }
 
     pub fn open(&self) {
-        self.connection.spawn();
+        // self.connection.spawn();
 
-        std::thread::spawn(move || {
-            let event_loop = EventLoop::new().unwrap();
-            let window_size = LogicalSize::new(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
+        let event_loop = EventLoop::new().unwrap();
+        let window_size = LogicalSize::new(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
 
-            let window = winit::window::WindowBuilder::new()
-                .with_inner_size(window_size)
-                .with_title("Spice client".to_string())
-                .build(&event_loop)
-                .unwrap();
-            event_loop
-                .run(move |event, _, control_flow| match event {
-                    Event::AboutToWait => window.request_redraw(),
-                    Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::CloseRequested => event_loop.exit(),
-                        WindowEvent::RedrawRequested => {}
-                        _ => {}
-                    },
+        let window = winit::window::WindowBuilder::new()
+            .with_inner_size(window_size)
+            .with_title("Spice client".to_string())
+            .build(&event_loop)
+            .unwrap();
+        event_loop
+            .run(move |event, _| match event {
+                Event::AboutToWait => window.request_redraw(),
+                Event::WindowEvent { event, .. } => match event {
+                    // WindowEvent::CloseRequested => event_loop.exit(),
+                    WindowEvent::RedrawRequested => {}
                     _ => {}
-                })
-                .unwrap();
-        });
+                },
+                _ => {}
+            })
+            .unwrap();
     }
 }
