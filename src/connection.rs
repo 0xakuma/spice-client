@@ -10,7 +10,11 @@ use glib::{
     MainContext, Object, Value,
 };
 
-use crate::{channel::Channel, display_channel::DisplayChannel, session::Session};
+use crate::{
+    channel::Channel,
+    display_channel::{Display, DisplayChannel},
+    session::Session,
+};
 
 extern "C" {
     pub fn spice_util_set_debug(enabled: gboolean);
@@ -46,17 +50,18 @@ impl<'a> SpiceConnection<'a> {
                     };
 
                     if let Some(_channel_type) = channel_type {
-                        if _channel_type == 1 {
-                            let callback = |values: &[Value]| {
-                                let event = values.get(1);
-                                if let Some(event) = event {
-                                    if let Some(event) = event.get::<i32>().ok() {
-                                        dbg!(event);
-                                    }
+                        dbg!(_channel_type);
+                        let callback = |values: &[Value]| {
+                            let event = values.get(1);
+                            if let Some(event) = event {
+                                if let Some(event) = event.get::<i32>().ok() {
+                                    dbg!(event);
                                 }
-                                None
-                            };
-                            obj.connect("channel-event", false, callback);
+                            }
+                            None
+                        };
+                        obj.connect("channel-event", false, callback);
+                        if _channel_type == 1 {
                             obj.connect("main-mouse-update", false, |values: &[Value]| {
                                 dbg!("Main mouse update");
                                 None
@@ -64,8 +69,8 @@ impl<'a> SpiceConnection<'a> {
                         }
 
                         if _channel_type == 2 {
-                            dbg!("Display channel");
                             let display_channel = DisplayChannel::from(obj.as_ptr() as *mut _);
+                            display_channel.lock().unwrap().connect();
                             if let Some(_channels) = _channels.upgrade() {
                                 _channels
                                     .lock()
@@ -103,7 +108,7 @@ impl<'a> SpiceConnection<'a> {
         true
     }
 
-    pub fn spawn(&mut self) {
+    pub fn spawn(&self) {
         unsafe {
             spice_util_set_debug(1);
         }
@@ -122,6 +127,16 @@ impl<'a> SpiceConnection<'a> {
                 g_main_loop_run(_loop.as_ptr());
             };
         });
+    }
+
+    pub fn display(&self) -> Option<Display> {
+        self.channels.lock().unwrap().iter().find_map(|e| {
+            if let Channel::DisplayChannel(display_channel) = e {
+                display_channel.lock().unwrap().display()
+            } else {
+                None
+            }
+        })
     }
 }
 

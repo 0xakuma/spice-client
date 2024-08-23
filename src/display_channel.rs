@@ -3,11 +3,15 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use glib::{object::ObjectExt, translate::FromGlibPtrNone, Object, Value};
+use glib::{
+    object::{ObjectExt, ObjectType},
+    translate::FromGlibPtrNone,
+    Object, Value,
+};
 
 use crate::channel::spice_channel_connect;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Display {
     pub canvas_img: Option<*mut c_void>,
     pub width: c_int,
@@ -17,14 +21,15 @@ pub struct Display {
 }
 
 pub struct DisplayChannel {
-    inner: *mut c_void,
+    inner: Object,
     pub display: Option<Display>,
 }
 
 impl DisplayChannel {
     pub fn from(value: *mut c_void) -> Arc<Mutex<Self>> {
+        let obj = unsafe { Object::from_glib_none(value as *const _) };
         let display_channel = Arc::new(Mutex::new(Self {
-            inner: value,
+            inner: obj,
             display: None,
         }));
         let _display_channel = display_channel.clone();
@@ -35,22 +40,17 @@ impl DisplayChannel {
         display_channel
     }
 
-    fn obj(&self) -> glib::Object {
-        unsafe { Object::from_glib_none(self.inner as *const _) }
-    }
     pub fn connect(&self) -> bool {
-        let rt = unsafe { spice_channel_connect(self.inner) };
+        let rt = unsafe { spice_channel_connect(self.inner.as_ptr() as *mut _) };
         rt.is_positive()
     }
     fn handle_glib_events(&self, _ref: Arc<Mutex<Self>>) {
-        let obj = self.obj();
-
-        obj.connect(
+        self.inner.connect(
             "display-primary-create",
             false,
             move |values: &[Value]| {
                 // let shmid = values.get(5);
-
+                dbg!("Primary display created");
                 let mut display = Display::default();
 
                 if let Some(_format) = values.get(1) {
@@ -83,17 +83,22 @@ impl DisplayChannel {
                     }
                 }
                 _ref.lock().unwrap().display = Some(display);
-                dbg!("Primary display created");
                 None
             },
         );
 
-        obj.connect("display-primary-destroy", false, |values: &[Value]| {
-            if let Some(_display_channel) = values.get(0) {
-                if let Some(_display_channel) = _display_channel.get::<Object>().ok() {}
-            }
-            None
-        });
+        self.inner
+            .connect("display-primary-destroy", false, |values: &[Value]| {
+                dbg!("Display destroyed");
+                if let Some(_display_channel) = values.get(0) {
+                    if let Some(_display_channel) = _display_channel.get::<Object>().ok() {}
+                }
+                None
+            });
+    }
+
+    pub fn display(&self) -> Option<Display> {
+        self.display.clone()
     }
 }
 

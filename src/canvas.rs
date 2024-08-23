@@ -16,8 +16,8 @@ use winit::{
 };
 
 use crate::shader_bindings::{
-    TextureIndex, TextureIndex_TextureIndexBaseColor, TexturedVertex,
-    VertexInputIndex_VertexInputIndexVertices, VertexInputIndex_VertexInputIndexViewportSize,
+    TextureIndex_TextureIndexBaseColor, TexturedVertex, VertexInputIndex_VertexInputIndexVertices,
+    VertexInputIndex_VertexInputIndexViewportSize,
 };
 
 pub trait Canvas {
@@ -40,7 +40,7 @@ impl MetalCanvas {
     pub fn new() -> Self {
         let device = Device::system_default().expect("No device found");
         let layer = MetalLayer::new();
-        dbg!("Layer created");
+        layer.set_device(&device);
         layer.set_pixel_format(metal::MTLPixelFormat::BGRA8Unorm);
         layer.set_presents_with_transaction(false);
         let library = device
@@ -66,8 +66,6 @@ impl MetalCanvas {
         let render_pipeline = device
             .new_render_pipeline_state(&pipeline_state_descriptor)
             .unwrap();
-
-        dbg!("Render pipeline created");
 
         let command_queue = device.new_command_queue();
 
@@ -119,7 +117,7 @@ impl MetalCanvas {
         let encoder = command_buffer.new_render_command_encoder(&render_pass_desc);
         encoder.set_render_pipeline_state(&self.render_pipeline);
 
-        let vertex_data = vertices();
+        let vertex_data = vertices(width, height);
         let vertex_buffer = self.device.new_buffer_with_data(
             vertex_data.as_ptr() as *const _,
             (vertex_data.len() * std::mem::size_of::<TexturedVertex>()) as u64,
@@ -193,14 +191,16 @@ fn textured_vertex(position: [f32; 2], texture_coord: [f32; 2]) -> TexturedVerte
     }
 }
 
-fn vertices() -> [TexturedVertex; 6] {
+fn vertices(w: u64, h: u64) -> [TexturedVertex; 6] {
+    let x = w as f32 / 2.;
+    let y = h as f32 / 2.;
     [
-        textured_vertex([-200., -200.], [0., 1.]),
-        textured_vertex([200., -200.], [1., 1.]),
-        textured_vertex([200., 200.], [1., 0.]),
-        textured_vertex([-200., -200.], [0., 1.]),
-        textured_vertex([200., 200.], [1., 0.]),
-        textured_vertex([-200., 200.], [0., 0.]),
+        textured_vertex([-x, -y], [0., 1.]),
+        textured_vertex([x, -y], [1., 1.]),
+        textured_vertex([x, y], [1., 0.]),
+        textured_vertex([-x, -y], [0., 1.]),
+        textured_vertex([x, y], [1., 0.]),
+        textured_vertex([-x, y], [0., 0.]),
     ]
 }
 
