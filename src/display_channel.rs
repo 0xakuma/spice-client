@@ -87,6 +87,11 @@ impl DisplayChannel {
             },
         );
 
+        self.inner.connect("gl-draw", false, |values: &[Value]| {
+            dbg!("GL scanout");
+            None
+        });
+
         self.inner
             .connect("display-primary-destroy", false, |values: &[Value]| {
                 dbg!("Display destroyed");

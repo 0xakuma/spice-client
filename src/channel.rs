@@ -5,7 +5,10 @@ use std::{
 
 use glib::ffi::gboolean;
 
-use crate::{display_channel::DisplayChannel, mouse_channel::MouseChannel};
+use crate::{
+    cursor_channel::CursorChannel, display_channel::DisplayChannel, input_channel::InputChannel,
+    main_channel::MainChannel,
+};
 
 extern "C" {
     pub fn spice_channel_connect(channel: *mut c_void) -> gboolean;
@@ -13,5 +16,7 @@ extern "C" {
 
 pub enum Channel {
     DisplayChannel(Arc<Mutex<DisplayChannel>>),
-    MouseChannel(Arc<Mutex<MouseChannel>>),
+    CursorChannel(Arc<Mutex<CursorChannel>>),
+    InputChannel(Arc<Mutex<InputChannel>>),
+    MainChannel(Arc<Mutex<MainChannel>>),
 }

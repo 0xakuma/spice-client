@@ -12,7 +12,10 @@ use glib::{
 
 use crate::{
     channel::Channel,
+    cursor_channel::CursorChannel,
     display_channel::{Display, DisplayChannel},
+    input_channel::InputChannel,
+    main_channel::MainChannel,
     session::Session,
 };
 
@@ -62,10 +65,14 @@ impl<'a> SpiceConnection<'a> {
                         };
                         obj.connect("channel-event", false, callback);
                         if _channel_type == 1 {
-                            obj.connect("main-mouse-update", false, |values: &[Value]| {
-                                dbg!("Main mouse update");
-                                None
-                            });
+                            let main_channel = MainChannel::from(obj);
+                            if let Some(_channels) = _channels.upgrade() {
+                                _channels
+                                    .lock()
+                                    .unwrap()
+                                    .push(Channel::MainChannel(main_channel));
+                            }
+                            return;
                         }
 
                         if _channel_type == 2 {
@@ -76,6 +83,26 @@ impl<'a> SpiceConnection<'a> {
                                     .lock()
                                     .unwrap()
                                     .push(Channel::DisplayChannel(display_channel));
+                            }
+                        }
+
+                        if _channel_type == 3 {
+                            let input_channel = InputChannel::from(obj.as_ptr() as *mut _);
+                            if let Some(_channels) = _channels.upgrade() {
+                                _channels
+                                    .lock()
+                                    .unwrap()
+                                    .push(Channel::InputChannel(input_channel));
+                            }
+                        }
+
+                        if _channel_type == 4 {
+                            let cursor_channel = CursorChannel::from(obj);
+                            if let Some(_channels) = _channels.upgrade() {
+                                _channels
+                                    .lock()
+                                    .unwrap()
+                                    .push(Channel::CursorChannel(cursor_channel));
                             }
                         }
                     }

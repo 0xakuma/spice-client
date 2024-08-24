@@ -1,8 +1,10 @@
 pub mod canvas;
 pub mod channel;
 pub mod connection;
+mod cursor_channel;
 pub mod display_channel;
-mod mouse_channel;
+pub mod input_channel;
+pub mod main_channel;
 pub mod session;
 mod shader_bindings;
 pub mod window;
