@@ -5,6 +5,7 @@ mod cursor_channel;
 pub mod display_channel;
 pub mod input_channel;
 pub mod main_channel;
+pub mod scancodes;
 pub mod session;
 mod shader_bindings;
 pub mod window;

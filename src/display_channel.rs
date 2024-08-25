@@ -93,6 +93,12 @@ impl DisplayChannel {
         });
 
         self.inner
+            .connect("display-invalidate", false, |values: &[Value]| {
+                dbg!("Display invalidate");
+                None
+            });
+
+        self.inner
             .connect("display-primary-destroy", false, |values: &[Value]| {
                 dbg!("Display destroyed");
                 if let Some(_display_channel) = values.get(0) {

@@ -88,6 +88,7 @@ impl<'a> SpiceConnection<'a> {
 
                         if _channel_type == 3 {
                             let input_channel = InputChannel::from(obj.as_ptr() as *mut _);
+                            input_channel.lock().unwrap().connect();
                             if let Some(_channels) = _channels.upgrade() {
                                 _channels
                                     .lock()
@@ -98,6 +99,7 @@ impl<'a> SpiceConnection<'a> {
 
                         if _channel_type == 4 {
                             let cursor_channel = CursorChannel::from(obj);
+                            cursor_channel.lock().unwrap().connect();
                             if let Some(_channels) = _channels.upgrade() {
                                 _channels
                                     .lock()
@@ -160,6 +162,16 @@ impl<'a> SpiceConnection<'a> {
         self.channels.lock().unwrap().iter().find_map(|e| {
             if let Channel::DisplayChannel(display_channel) = e {
                 display_channel.lock().unwrap().display()
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn input(&self) -> Option<Arc<Mutex<InputChannel>>> {
+        self.channels.lock().unwrap().iter().find_map(|e| {
+            if let Channel::InputChannel(input_channel) = e {
+                Some(input_channel.clone())
             } else {
                 None
             }
