@@ -13,6 +13,13 @@ extern "C" {
     pub fn spice_inputs_button_release(channel: *const c_void, button: i32, button_state: i32);
     pub fn spice_inputs_key_press(channel: *const c_void, scancode: u32);
     pub fn spice_inputs_key_release(channel: *const c_void, scancode: u32);
+    pub fn spice_inputs_position(
+        channel: *const c_void,
+        x: i32,
+        y: i32,
+        display: i32,
+        button_state: i32,
+    );
 }
 
 pub struct InputChannel {
@@ -32,14 +39,21 @@ impl InputChannel {
     }
 
     pub fn move_cursor(&self, dx: f64, dy: f64) {
+        let x = dx.floor() as i32;
+        let y = dy.floor() as i32;
         unsafe {
-            spice_inputs_motion(self.inner.as_ptr() as *const _, dx as i32, dy as i32, 0);
+            spice_inputs_motion(self.inner.as_ptr() as *const _, 5, -5, 0);
         };
+    }
+
+    pub fn set_cursor_pos(&self, display_id: i32, x: i32, y: i32) {
+        unsafe { spice_inputs_position(self.inner.as_ptr() as *const _, x, y, display_id, 0) };
     }
 
     pub fn press_button(&self, button: i32, button_state: i32) {
         unsafe { spice_inputs_button_press(self.inner.as_ptr() as *const _, button, button_state) };
     }
+
     pub fn release_button(&self, button: i32, button_state: i32) {
         unsafe {
             spice_inputs_button_release(self.inner.as_ptr() as *const _, button, button_state);

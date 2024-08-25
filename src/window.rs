@@ -3,10 +3,9 @@ use std::sync::{Arc, Mutex};
 use objc::rc::autoreleasepool;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, WindowEvent},
+    event::{DeviceEvent, ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::PhysicalKey,
-    platform::scancode::PhysicalKeyExtScancode,
 };
 
 use crate::{canvas::MetalCanvas, connection::SpiceConnection, scancodes};
@@ -41,7 +40,6 @@ impl<'a> CocoaWindow<'a> {
 
         self.canvas.set_window(&window);
         let _connection = self.connection.clone();
-        let mut last_cursor_pos = (0., 0.);
         event_loop
             .run(move |event, event_loop| {
                 autoreleasepool(|| {
@@ -63,21 +61,16 @@ impl<'a> CocoaWindow<'a> {
                                 }
                             }
                             WindowEvent::CursorMoved { position, .. } => {
-                                let curr_pos = (position.x, position.y);
-                                let dx = curr_pos.0 - last_cursor_pos.0;
-                                let dy = curr_pos.1 - last_cursor_pos.1;
-
                                 if let Some(input_channel) = _connection.input() {
-                                    input_channel.lock().unwrap().move_cursor(dx, dy);
+                                    input_channel.lock().unwrap().set_cursor_pos(
+                                        0,
+                                        position.x as i32,
+                                        position.y as i32,
+                                    );
                                 }
-
-                                last_cursor_pos = curr_pos;
                             }
-                            WindowEvent::MouseInput {
-                                device_id,
-                                state,
-                                button,
-                            } => {
+                            WindowEvent::Resized(size) => {}
+                            WindowEvent::MouseInput { state, button, .. } => {
                                 let mut mask = 1;
                                 match button {
                                     winit::event::MouseButton::Left => {
@@ -94,11 +87,9 @@ impl<'a> CocoaWindow<'a> {
 
                                 if let Some(input_channel) = _connection.input() {
                                     if state == ElementState::Pressed {
-                                        dbg!("Pressed");
                                         input_channel.lock().unwrap().press_button(2, mask);
                                     }
                                     if state == ElementState::Released {
-                                        dbg!("Released");
                                         input_channel.lock().unwrap().release_button(2, mask);
                                     }
                                 }

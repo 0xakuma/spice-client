@@ -90,6 +90,21 @@ impl<'a> SpiceConnection<'a> {
                             let input_channel = InputChannel::from(obj.as_ptr() as *mut _);
                             input_channel.lock().unwrap().connect();
                             if let Some(_channels) = _channels.upgrade() {
+                                if let Some(display_id) =
+                                    _channels.lock().unwrap().iter().find_map(|e| {
+                                        if let Channel::DisplayChannel(display_channel) = e {
+                                            Some(display_channel.lock().unwrap().id())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                {
+                                    input_channel
+                                        .lock()
+                                        .unwrap()
+                                        .set_cursor_pos(display_id, 0, 0);
+                                }
+
                                 _channels
                                     .lock()
                                     .unwrap()

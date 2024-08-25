@@ -1,6 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use glib::{object::ObjectType, translate::FromGlibPtrNone, Object};
+use glib::{
+    object::{ObjectExt, ObjectType},
+    translate::FromGlibPtrNone,
+    Object,
+};
 
 use crate::channel::spice_channel_connect;
 
