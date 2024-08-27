@@ -3,11 +3,12 @@ use std::sync::{Arc, Mutex};
 use objc::rc::autoreleasepool;
 use winit::{
     dpi::LogicalSize,
-    event::{Event, WindowEvent},
+    event::{DeviceEvent, ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
+    keyboard::PhysicalKey,
 };
 
-use crate::{canvas::MetalCanvas, connection::SpiceConnection};
+use crate::{canvas::MetalCanvas, connection::SpiceConnection, scancodes};
 
 const INITIAL_WINDOW_WIDTH: u32 = 800;
 const INITIAL_WINDOW_HEIGHT: u32 = 600;
@@ -56,6 +57,68 @@ impl<'a> CocoaWindow<'a> {
                                             _display.height as u64,
                                             _display.width as u64,
                                         );
+                                    }
+                                }
+                            }
+                            WindowEvent::CursorMoved { position, .. } => {
+                                if let Some(input_channel) = _connection.input() {
+                                    input_channel.lock().unwrap().set_cursor_pos(
+                                        0,
+                                        position.x as i32,
+                                        position.y as i32,
+                                    );
+                                }
+                            }
+                            WindowEvent::Resized(size) => {
+                                dbg!(size);
+                                _connection
+                                    .change_monitor_config(size.width as i32, size.height as i32);
+                            }
+                            WindowEvent::MouseInput { state, button, .. } => {
+                                let mut mask = 1;
+                                match button {
+                                    winit::event::MouseButton::Left => {
+                                        mask = mask << 0;
+                                    }
+                                    winit::event::MouseButton::Middle => {
+                                        mask = mask << 1;
+                                    }
+                                    winit::event::MouseButton::Right => {
+                                        mask = mask << 2;
+                                    }
+                                    _ => {}
+                                }
+
+                                if let Some(input_channel) = _connection.input() {
+                                    if state == ElementState::Pressed {
+                                        input_channel.lock().unwrap().press_button(2, mask);
+                                    }
+                                    if state == ElementState::Released {
+                                        input_channel.lock().unwrap().release_button(2, mask);
+                                    }
+                                }
+                            }
+                            WindowEvent::KeyboardInput {
+                                event,
+                                is_synthetic,
+                                ..
+                            } => {
+                                if is_synthetic {
+                                    return;
+                                }
+                                if let Some(input_channel) = _connection.input() {
+                                    if let PhysicalKey::Code(code) = event.physical_key {
+                                        if let Some(scancode) =
+                                            crate::scancodes::scancode_to_xt(code)
+                                        {
+                                            if event.state == ElementState::Pressed {
+                                                input_channel.lock().unwrap().key_press(scancode);
+                                            }
+
+                                            if event.state == ElementState::Released {
+                                                input_channel.lock().unwrap().key_release(scancode);
+                                            }
+                                        }
                                     }
                                 }
                             }
