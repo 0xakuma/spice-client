@@ -1,6 +1,12 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    ffi::c_void,
+    sync::{Arc, Mutex},
+};
 
-use glib::{object::ObjectExt, Object, Value};
+use glib::{
+    object::{ObjectExt, ObjectType},
+    Object, Value,
+};
 
 pub struct MainChannel {
     inner: Object,
@@ -31,6 +37,10 @@ impl MainChannel {
             },
         );
         _self
+    }
+
+    pub fn as_ptr(&self) -> *const c_void {
+        self.inner.as_ptr() as *const _
     }
 
     pub fn is_mouse_mode_server(&self) -> bool {

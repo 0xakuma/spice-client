@@ -31,6 +31,7 @@ impl DisplayChannel {
     pub fn from(value: *mut c_void) -> Arc<Mutex<Self>> {
         let obj = unsafe { Object::from_glib_none(value as *const _) };
         let display_id = obj.property::<i32>("channel-id");
+        dbg!(display_id);
         let display_channel = Arc::new(Mutex::new(Self {
             inner: obj,
             display: None,

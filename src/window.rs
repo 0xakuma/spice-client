@@ -69,7 +69,11 @@ impl<'a> CocoaWindow<'a> {
                                     );
                                 }
                             }
-                            WindowEvent::Resized(size) => {}
+                            WindowEvent::Resized(size) => {
+                                dbg!(size);
+                                _connection
+                                    .change_monitor_config(size.width as i32, size.height as i32);
+                            }
                             WindowEvent::MouseInput { state, button, .. } => {
                                 let mut mask = 1;
                                 match button {

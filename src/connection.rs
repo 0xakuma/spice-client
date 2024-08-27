@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::c_void,
     sync::{Arc, Mutex},
 };
@@ -7,6 +8,7 @@ use glib::{
     clone::Downgrade,
     ffi::{g_main_context_push_thread_default, g_main_context_ref, g_main_loop_run, gboolean},
     object::{ObjectExt, ObjectType},
+    property::PropertyGet,
     MainContext, Object, Value,
 };
 
@@ -22,20 +24,32 @@ use crate::{
 extern "C" {
     pub fn spice_util_set_debug(enabled: gboolean);
     pub fn spice_util_set_main_context(ctx: *const c_void);
+    pub fn spice_main_update_display(
+        channel: *const c_void,
+        id: i32,
+        x: i32,
+        y: i32,
+        w: i32,
+        h: i32,
+        update: gboolean,
+    );
+    pub fn spice_main_set_display(channel: *const c_void, id: i32, x: i32, y: i32, w: i32, h: i32);
 }
+
+type Channels = HashMap<i32, Channel>;
 
 pub struct SpiceConnection<'a> {
     pub session: Arc<Mutex<Session>>,
     host: Option<&'a str>,
     port: Option<u32>,
-    channels: Arc<Mutex<Vec<Channel>>>,
+    channels: Arc<Mutex<Channels>>,
 }
 
 impl<'a> SpiceConnection<'a> {
     pub fn new() -> Self {
         let session = Session::new();
 
-        let channels = Arc::new(Mutex::new(Vec::new()));
+        let channels = Arc::new(Mutex::new(HashMap::new()));
         let _channels = channels.downgrade();
 
         session.signal_connect("channel-new", move |values: &[Value]| {
@@ -70,7 +84,7 @@ impl<'a> SpiceConnection<'a> {
                                 _channels
                                     .lock()
                                     .unwrap()
-                                    .push(Channel::MainChannel(main_channel));
+                                    .insert(1, Channel::MainChannel(main_channel));
                             }
                             return;
                         }
@@ -82,7 +96,7 @@ impl<'a> SpiceConnection<'a> {
                                 _channels
                                     .lock()
                                     .unwrap()
-                                    .push(Channel::DisplayChannel(display_channel));
+                                    .insert(2, Channel::DisplayChannel(display_channel));
                             }
                         }
 
@@ -91,13 +105,13 @@ impl<'a> SpiceConnection<'a> {
                             input_channel.lock().unwrap().connect();
                             if let Some(_channels) = _channels.upgrade() {
                                 if let Some(display_id) =
-                                    _channels.lock().unwrap().iter().find_map(|e| {
-                                        if let Channel::DisplayChannel(display_channel) = e {
-                                            Some(display_channel.lock().unwrap().id())
-                                        } else {
-                                            None
-                                        }
-                                    })
+                                    if let Some(Channel::DisplayChannel(display_channel)) =
+                                        _channels.lock().unwrap().get(&2)
+                                    {
+                                        Some(display_channel.lock().unwrap().id())
+                                    } else {
+                                        None
+                                    }
                                 {
                                     input_channel
                                         .lock()
@@ -108,7 +122,7 @@ impl<'a> SpiceConnection<'a> {
                                 _channels
                                     .lock()
                                     .unwrap()
-                                    .push(Channel::InputChannel(input_channel));
+                                    .insert(3, Channel::InputChannel(input_channel));
                             }
                         }
 
@@ -119,7 +133,7 @@ impl<'a> SpiceConnection<'a> {
                                 _channels
                                     .lock()
                                     .unwrap()
-                                    .push(Channel::CursorChannel(cursor_channel));
+                                    .insert(4, Channel::CursorChannel(cursor_channel));
                             }
                         }
                     }
@@ -174,23 +188,42 @@ impl<'a> SpiceConnection<'a> {
     }
 
     pub fn display(&self) -> Option<Display> {
-        self.channels.lock().unwrap().iter().find_map(|e| {
-            if let Channel::DisplayChannel(display_channel) = e {
-                display_channel.lock().unwrap().display()
-            } else {
-                None
-            }
-        })
+        if let Some(Channel::DisplayChannel(display_channel)) =
+            self.channels.lock().unwrap().get(&2)
+        {
+            display_channel.lock().unwrap().display()
+        } else {
+            None
+        }
     }
 
     pub fn input(&self) -> Option<Arc<Mutex<InputChannel>>> {
-        self.channels.lock().unwrap().iter().find_map(|e| {
-            if let Channel::InputChannel(input_channel) = e {
-                Some(input_channel.clone())
-            } else {
-                None
+        if let Some(Channel::InputChannel(input_channel)) = self.channels.lock().unwrap().get(&3) {
+            Some(input_channel.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn main_channel(&self) -> Option<Arc<Mutex<MainChannel>>> {
+        if let Some(Channel::MainChannel(main_channel)) = self.channels.lock().unwrap().get(&1) {
+            Some(main_channel.clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn change_monitor_config(&self, w: i32, h: i32) {
+        if let Some(main_channel) = self.main_channel() {
+            if let Some(Channel::DisplayChannel(display_channel)) =
+                self.channels.lock().unwrap().get(&2)
+            {
+                let id = display_channel.lock().unwrap().id();
+                unsafe {
+                    spice_main_set_display(main_channel.lock().unwrap().as_ptr(), id, 0, 0, w, h);
+                };
             }
-        })
+        }
     }
 }
 
