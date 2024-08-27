@@ -12,7 +12,7 @@ use glib::{
 
 use crate::channel::spice_channel_connect;
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct Display {
     pub canvas_img: Option<*mut c_void>,
     pub width: c_int,
@@ -99,10 +99,7 @@ impl DisplayChannel {
         });
 
         self.inner
-            .connect("display-invalidate", false, |values: &[Value]| {
-                dbg!("Display invalidate");
-                None
-            });
+            .connect("display-invalidate", false, |values: &[Value]| None);
 
         self.inner
             .connect("display-primary-destroy", false, |values: &[Value]| {
@@ -120,6 +117,12 @@ impl DisplayChannel {
 
     pub fn display(&self) -> Option<Display> {
         self.display.clone()
+    }
+
+    pub fn dimention(&self) -> (u32, u32) {
+        let w = self.inner.property::<u32>("width");
+        let h = self.inner.property::<u32>("height");
+        (w, h)
     }
 }
 
