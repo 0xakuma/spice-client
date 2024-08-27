@@ -3,7 +3,7 @@ use std::sync::Arc;
 use objc::rc::autoreleasepool;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, WindowEvent},
+    event::{ElementState, Event, MouseScrollDelta, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::PhysicalKey,
 };
@@ -39,7 +39,6 @@ impl<'a> CocoaWindow<'a> {
         }
 
         let _display = display.unwrap();
-        dbg!(_display);
 
         let event_loop = EventLoop::new().unwrap();
         let window_size = LogicalSize::new(_display.width as u32, _display.height as u32);
@@ -87,12 +86,6 @@ impl<'a> CocoaWindow<'a> {
                                     );
                                 }
                             }
-                            WindowEvent::Resized(size) => {
-                                dbg!(size);
-                                let w = size.width / 2;
-                                let h = size.height / 2;
-                                _connection.change_monitor_config(w as i32, h as i32);
-                            }
                             WindowEvent::MouseInput { state, button, .. } => {
                                 let mut mask = 1;
                                 match button {
@@ -114,6 +107,29 @@ impl<'a> CocoaWindow<'a> {
                                     }
                                     if state == ElementState::Released {
                                         input_channel.lock().unwrap().release_button(2, mask);
+                                    }
+                                }
+                            }
+                            WindowEvent::MouseWheel {
+                                device_id,
+                                delta,
+                                phase,
+                            } => {
+                                if let Some(input_channel) = _connection.input() {
+                                    if let MouseScrollDelta::LineDelta(dx, dy) = delta {
+                                        if dy > 0. {
+                                            dbg!(dy);
+                                            input_channel.lock().unwrap().press_button(5, 1 << 3);
+                                        }
+                                    }
+
+                                    if let MouseScrollDelta::PixelDelta(d) = delta {
+                                        if d.y > 0. {
+                                            input_channel.lock().unwrap().press_button(5, 1 << 3);
+                                        }
+                                        if d.y < 0. {
+                                            input_channel.lock().unwrap().press_button(6, 1 << 4);
+                                        }
                                     }
                                 }
                             }
