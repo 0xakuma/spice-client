@@ -225,6 +225,26 @@ impl<'a> SpiceConnection<'a> {
             }
         }
     }
+
+    pub fn dimention(&self) -> (u32, u32) {
+        if let Some(Channel::DisplayChannel(display_channel)) =
+            self.channels.lock().unwrap().get(&2)
+        {
+            display_channel.lock().unwrap().dimention()
+        } else {
+            (0, 0)
+        }
+    }
+
+    pub fn display_channel(&self) -> Option<Arc<Mutex<DisplayChannel>>> {
+        if let Some(Channel::DisplayChannel(display_channel)) =
+            self.channels.lock().unwrap().get(&2)
+        {
+            Some(display_channel.clone())
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]

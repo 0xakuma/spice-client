@@ -1,17 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use objc::rc::autoreleasepool;
 use winit::{
     dpi::LogicalSize,
-    event::{DeviceEvent, ElementState, Event, WindowEvent},
+    event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::PhysicalKey,
 };
 
-use crate::{canvas::MetalCanvas, connection::SpiceConnection, scancodes};
-
-const INITIAL_WINDOW_WIDTH: u32 = 800;
-const INITIAL_WINDOW_HEIGHT: u32 = 600;
+use crate::{canvas::MetalCanvas, connection::SpiceConnection, display_channel::Display};
 
 pub struct CocoaWindow<'a> {
     canvas: MetalCanvas,
@@ -28,9 +25,24 @@ impl<'a> CocoaWindow<'a> {
 
     pub fn open(&self) {
         self.connection.spawn();
+        let _connection = self.connection.clone();
+
+        let mut display: Option<Display> = None;
+
+        loop {
+            if let Some(display_channel) = _connection.display_channel() {
+                if let Some(_display) = display_channel.lock().unwrap().display() {
+                    display = Some(_display);
+                    break;
+                }
+            }
+        }
+
+        let _display = display.unwrap();
+        dbg!(_display);
 
         let event_loop = EventLoop::new().unwrap();
-        let window_size = LogicalSize::new(INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
+        let window_size = LogicalSize::new(_display.width as u32, _display.height as u32);
 
         let window = winit::window::WindowBuilder::new()
             .with_inner_size(window_size)
@@ -39,7 +51,6 @@ impl<'a> CocoaWindow<'a> {
             .unwrap();
 
         self.canvas.set_window(&window);
-        let _connection = self.connection.clone();
         event_loop
             .run(move |event, event_loop| {
                 autoreleasepool(|| {
@@ -61,18 +72,26 @@ impl<'a> CocoaWindow<'a> {
                                 }
                             }
                             WindowEvent::CursorMoved { position, .. } => {
+                                let window_size = window.inner_size();
+                                let dx_moved = position.x / window_size.width as f64;
+                                let dy_moved = position.y / window_size.height as f64;
+
+                                let pos_x = dx_moved * _display.width as f64;
+                                let pos_y = dy_moved * _display.height as f64;
+
                                 if let Some(input_channel) = _connection.input() {
                                     input_channel.lock().unwrap().set_cursor_pos(
                                         0,
-                                        position.x as i32,
-                                        position.y as i32,
+                                        pos_x as i32,
+                                        pos_y as i32,
                                     );
                                 }
                             }
                             WindowEvent::Resized(size) => {
                                 dbg!(size);
-                                _connection
-                                    .change_monitor_config(size.width as i32, size.height as i32);
+                                let w = size.width / 2;
+                                let h = size.height / 2;
+                                _connection.change_monitor_config(w as i32, h as i32);
                             }
                             WindowEvent::MouseInput { state, button, .. } => {
                                 let mut mask = 1;
